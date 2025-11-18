@@ -1,400 +1,360 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>聊天对话页面</title>
+    <title>实时对话网站</title>
+    <!-- 引入Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
-
+        
         body {
-            background-color: #f0f2f5;
+            background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+            color: #333;
+            min-height: 100vh;
+            padding: 20px;
             display: flex;
             justify-content: center;
             align-items: center;
-            min-height: 100vh;
-            padding: 20px;
         }
-
-        .chat-container {
+        
+        .container {
             width: 100%;
             max-width: 800px;
-            height: 80vh;
-            background-color: white;
-            border-radius: 12px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            background-color: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
             display: flex;
             flex-direction: column;
+            height: 85vh;
+        }
+        
+        header {
+            background: linear-gradient(to right, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        h1 {
+            font-size: 2.2rem;
+            margin-bottom: 5px;
+        }
+        
+        .subtitle {
+            font-size: 1rem;
+            opacity: 0.9;
+        }
+        
+        .chat-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
             overflow: hidden;
         }
-
-        .chat-header {
-            background-color: #128C7E;
-            color: white;
-            padding: 16px 20px;
-            text-align: center;
-            font-size: 18px;
-            font-weight: 600;
-        }
-
-        .chat-messages {
+        
+        .messages {
             flex: 1;
-            padding: 20px;
             overflow-y: auto;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.05);
         }
-
-        .date-divider {
-            text-align: center;
-            margin: 15px 0;
-            position: relative;
-        }
-
-        .date-divider span {
-            background-color: #f0f2f5;
-            padding: 5px 15px;
-            border-radius: 20px;
-            font-size: 12px;
-            color: #666;
-        }
-
+        
         .message {
-            max-width: 70%;
-            padding: 12px 16px;
+            padding: 12px 18px;
+            margin-bottom: 15px;
             border-radius: 18px;
-            margin-bottom: 8px;
+            max-width: 80%;
             position: relative;
-            word-wrap: break-word;
-            line-height: 1.4;
+            animation: fadeIn 0.3s ease;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
         }
-
-        .sent {
-            align-self: flex-end;
-            background-color: #dcf8c6;
+        
+        .message.user {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            margin-left: auto;
             border-bottom-right-radius: 5px;
         }
-
-        .received {
-            align-self: flex-start;
+        
+        .message.other {
             background-color: white;
             border: 1px solid #e0e0e0;
             border-bottom-left-radius: 5px;
         }
-
-        .message-time {
-            font-size: 11px;
-            color: #999;
-            margin-top: 5px;
-            text-align: right;
-        }
-
-        .chat-input {
+        
+        .message-header {
             display: flex;
-            padding: 15px;
-            background-color: #f0f0f0;
-            border-top: 1px solid #e0e0e0;
+            justify-content: space-between;
+            font-size: 0.8rem;
+            margin-bottom: 5px;
+            opacity: 0.8;
         }
-
-        .message-input {
+        
+        .input-area {
+            display: flex;
+            gap: 10px;
+        }
+        
+        #messageInput {
             flex: 1;
-            padding: 12px 16px;
+            padding: 15px 20px;
             border: none;
-            border-radius: 24px;
+            border-radius: 30px;
+            background-color: #f0f2f5;
+            font-size: 1rem;
             outline: none;
-            font-size: 15px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
         }
-
-        .send-button {
-            background-color: #128C7E;
+        
+        #messageInput:focus {
+            background-color: white;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        }
+        
+        #sendButton {
+            padding: 15px 25px;
+            background: linear-gradient(to right, #4facfe 0%, #00f2fe 100%);
             color: white;
             border: none;
-            border-radius: 50%;
-            width: 44px;
-            height: 44px;
-            margin-left: 10px;
+            border-radius: 30px;
             cursor: pointer;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            transition: background-color 0.2s;
+            font-size: 1rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 10px rgba(79, 172, 254, 0.4);
         }
-
-        .send-button:hover {
-            background-color: #0a6b5f;
+        
+        #sendButton:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(79, 172, 254, 0.6);
         }
-
-        .send-button:active {
-            transform: scale(0.95);
+        
+        #sendButton:active {
+            transform: translateY(0);
         }
-
-        .info-text {
+        
+        .info {
             text-align: center;
-            color: #999;
-            font-size: 13px;
-            margin-top: 10px;
+            padding: 10px;
+            color: #6c757d;
+            font-size: 0.9rem;
         }
-
+        
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: #6c757d;
+        }
+        
+        .empty-state i {
+            font-size: 3rem;
+            margin-bottom: 15px;
+            display: block;
+            opacity: 0.5;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
         /* 滚动条样式 */
-        .chat-messages::-webkit-scrollbar {
-            width: 6px;
+        .messages::-webkit-scrollbar {
+            width: 8px;
         }
-
-        .chat-messages::-webkit-scrollbar-track {
+        
+        .messages::-webkit-scrollbar-track {
             background: #f1f1f1;
+            border-radius: 10px;
         }
-
-        .chat-messages::-webkit-scrollbar-thumb {
+        
+        .messages::-webkit-scrollbar-thumb {
             background: #c1c1c1;
-            border-radius: 3px;
+            border-radius: 10px;
         }
-
-        .chat-messages::-webkit-scrollbar-thumb:hover {
+        
+        .messages::-webkit-scrollbar-thumb:hover {
             background: #a8a8a8;
         }
-
+        
+        /* 响应式设计 */
         @media (max-width: 600px) {
-            .chat-container {
+            .container {
                 height: 90vh;
-                border-radius: 0;
+                border-radius: 15px;
             }
-
-            body {
-                padding: 0;
+            
+            h1 {
+                font-size: 1.8rem;
             }
-
+            
             .message {
-                max-width: 85%;
+                max-width: 90%;
             }
         }
     </style>
 </head>
-
 <body>
-    <div class="chat-container">
-        <div class="chat-header">
-            聊天对话
+    <div class="container">
+        <header>
+            <h1>实时对话</h1>
+            <p class="subtitle">与所有访问者分享您的想法</p>
+        </header>
+        
+        <div class="chat-container">
+            <div class="messages" id="messagesContainer">
+                <div class="empty-state">
+                    <i>💬</i>
+                    <p>还没有消息，成为第一个发言的人吧！</p>
+                </div>
+            </div>
+            
+            <div class="input-area">
+                <input type="text" id="messageInput" placeholder="输入您的消息...">
+                <button id="sendButton">发送</button>
+            </div>
+            
+            <div class="info">
+                所有消息将在24小时后自动清除
+            </div>
         </div>
-        <div class="chat-messages" id="chatMessages">
-            <!-- 消息将在这里动态添加 -->
-        </div>
-        <div class="chat-input">
-            <input type="text" class="message-input" id="messageInput" placeholder="输入消息..." maxlength="500">
-            <button class="send-button" id="sendButton">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M2 21L23 12L2 3V10L17 12L2 14V21Z" fill="white" />
-                </svg>
-            </button>
-        </div>
-        <div class="info-text">最多显示最近5天的对话记录</div>
     </div>
 
     <script>
+        // Firebase配置 - 你需要替换为你的项目配置
+        const firebaseConfig = {
+            apiKey: "YOUR_API_KEY",
+            authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+            projectId: "YOUR_PROJECT_ID",
+            storageBucket: "YOUR_PROJECT_ID.appspot.com",
+            messagingSenderId: "YOUR_SENDER_ID",
+            appId: "YOUR_APP_ID"
+        };
+
+        // 初始化Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
         // 获取DOM元素
-        const chatMessages = document.getElementById('chatMessages');
+        const messagesContainer = document.getElementById('messagesContainer');
         const messageInput = document.getElementById('messageInput');
         const sendButton = document.getElementById('sendButton');
 
-        // 初始化消息数据（模拟5天的数据）
-        let messages = [
-            // {
-            //     date: getFormattedDate(0),
-            //     text: "你好！最近怎么样？",
-            //     time: "09:15",
-            //     type: "received"
-            // },
-            // {
-            //     date: getFormattedDate(0),
-            //     text: "我很好，谢谢！你呢？",
-            //     time: "09:16",
-            //     type: "sent"
-            // },
-            // {
-            //     date: getFormattedDate(0),
-            //     text: "我也很好。最近有什么新消息吗？",
-            //     time: "09:20",
-            //     type: "received"
-            // },
-            // {
-            //     date: getFormattedDate(1),
-            //     text: "昨天我们讨论的那个项目怎么样了？",
-            //     time: "10:05",
-            //     type: "sent"
-            // },
-            // {
-            //     date: getFormattedDate(1),
-            //     text: "还在进行中，预计下周可以完成。",
-            //     time: "10:10",
-            //     type: "received"
-            // },
-            // {
-            //     date: getFormattedDate(2),
-            //     text: "记得明天下午2点开会。",
-            //     time: "16:30",
-            //     type: "received"
-            // },
-            // {
-            //     date: getFormattedDate(2),
-            //     text: "好的，我会准时参加。",
-            //     time: "16:32",
-            //     type: "sent"
-            // },
-            // {
-            //     date: getFormattedDate(3),
-            //     text: "这个周末有什么计划吗？",
-            //     time: "19:45",
-            //     type: "sent"
-            // },
-            // {
-            //     date: getFormattedDate(4),
-            //     text: "还没有确定，你有什么建议？",
-            //     time: "08:20",
-            //     type: "received"
-            // }
-        ];
+        // 生成随机用户名
+        const adjectives = ["快乐的", "聪明的", "勇敢的", "好奇的", "友善的", "活泼的", "安静的", "热情的"];
+        const nouns = ["熊猫", "老虎", "狐狸", "兔子", "猫咪", "狗狗", "海豚", "老鹰"];
+        const randomName = adjectives[Math.floor(Math.random() * adjectives.length)] + nouns[Math.floor(Math.random() * nouns.length)];
+        
+        // 生成用户ID（简化实现）
+        const userId = Math.random().toString(36).substring(2, 15);
 
-        // 初始化显示消息
-        renderMessages();
-
-        // 发送消息功能
+        // 监听消息发送
         sendButton.addEventListener('click', sendMessage);
-        messageInput.addEventListener('keypress', function (e) {
+        messageInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
                 sendMessage();
             }
         });
 
+        // 发送消息函数
         function sendMessage() {
             const messageText = messageInput.value.trim();
-            if (messageText === '') return;
-
-            // 获取当前时间
-            const now = new Date();
-            const currentDate = getFormattedDate(0);
-            const currentTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
-
-            // 添加新消息
-            messages.push({
-                date: currentDate,
-                text: messageText,
-                time: currentTime,
-                type: "sent"
-            });
-
-            // 清空输入框
-            messageInput.value = '';
-
-            // 重新渲染消息
-            renderMessages();
-
-            // 自动滚动到底部
-            chatMessages.scrollTop = chatMessages.scrollHeight;
-
-            // 模拟回复（可选）
-            setTimeout(() => {
-                const replyTime = new Date();
-                const replyTimeStr = `${replyTime.getHours().toString().padStart(2, '0')}:${(replyTime.getMinutes() + 1).toString().padStart(2, '0')}`;
-
-                messages.push({
-                    date: currentDate,
-                    text: "收到你的消息了，稍后回复。",
-                    time: replyTimeStr,
-                    type: "received"
+            
+            if (messageText) {
+                // 添加消息到Firestore
+                db.collection('messages').add({
+                    text: messageText,
+                    user: randomName,
+                    userId: userId,
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                })
+                .then(() => {
+                    // 清空输入框
+                    messageInput.value = '';
+                })
+                .catch((error) => {
+                    console.error("发送消息出错: ", error);
+                    alert("消息发送失败，请稍后重试");
                 });
-
-                renderMessages();
-                chatMessages.scrollTop = chatMessages.scrollHeight;
-            }, 1000);
+            }
         }
 
-        function renderMessages() {
-            // 清空消息容器
-            chatMessages.innerHTML = '';
-
-            // 获取最近5天的日期
-            const recentDates = [];
-            for (let i = 0; i < 5; i++) {
-                recentDates.push(getFormattedDate(i));
-            }
-
-            // 过滤出最近5天的消息
-            const recentMessages = messages.filter(msg => recentDates.includes(msg.date));
-
-            // 按日期分组
-            const groupedMessages = {};
-            recentMessages.forEach(msg => {
-                if (!groupedMessages[msg.date]) {
-                    groupedMessages[msg.date] = [];
+        // 监听并显示消息
+        db.collection('messages')
+            .orderBy('timestamp', 'asc')
+            .onSnapshot((snapshot) => {
+                // 清除空状态提示
+                const emptyState = messagesContainer.querySelector('.empty-state');
+                if (emptyState) {
+                    emptyState.remove();
                 }
-                groupedMessages[msg.date].push(msg);
-            });
-
-            // 渲染消息（按日期倒序排列，最新的在前面）
-            Object.keys(groupedMessages).sort((a, b) => new Date(b) - new Date(a)).forEach(date => {
-                // 添加日期分隔符
-                const dateDivider = document.createElement('div');
-                dateDivider.className = 'date-divider';
-
-                const today = new Date();
-                const messageDate = new Date(date);
-                let dateText = formatDateDisplay(date, today);
-
-                dateDivider.innerHTML = `<span>${dateText}</span>`;
-                chatMessages.appendChild(dateDivider);
-
-                // 添加当天的消息
-                groupedMessages[date].forEach(msg => {
-                    const messageElement = document.createElement('div');
-                    messageElement.className = `message ${msg.type}`;
-                    messageElement.innerHTML = `
-                        <div class="message-text">${msg.text}</div>
-                        <div class="message-time">${msg.time}</div>
-                    `;
-                    chatMessages.appendChild(messageElement);
+                
+                // 清空消息容器（简化实现，实际应用中应使用更高效的方法）
+                messagesContainer.innerHTML = '';
+                
+                // 获取24小时前的时间戳
+                const oneDayAgo = new Date();
+                oneDayAgo.setDate(oneDayAgo.getDate() - 1);
+                
+                snapshot.forEach((doc) => {
+                    const message = doc.data();
+                    const messageTime = message.timestamp ? message.timestamp.toDate() : new Date();
+                    
+                    // 只显示一天内的消息
+                    if (messageTime > oneDayAgo) {
+                        const messageElement = document.createElement('div');
+                        messageElement.className = `message ${message.userId === userId ? 'user' : 'other'}`;
+                        
+                        const timeString = messageTime.toLocaleTimeString('zh-CN', { 
+                            hour: '2-digit', 
+                            minute: '2-digit' 
+                        });
+                        
+                        messageElement.innerHTML = `
+                            <div class="message-header">
+                                <span>${message.user}</span>
+                                <span>${timeString}</span>
+                            </div>
+                            <div class="message-text">${message.text}</div>
+                        `;
+                        
+                        messagesContainer.appendChild(messageElement);
+                    }
                 });
+                
+                // 滚动到底部
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
             });
 
-            // 如果没有消息，显示提示
-            if (recentMessages.length === 0) {
-                const noMessages = document.createElement('div');
-                noMessages.className = 'info-text';
-                noMessages.style.padding = '20px';
-                noMessages.textContent = '最近5天内没有对话记录';
-                chatMessages.appendChild(noMessages);
-            }
-        }
-
-        // 获取格式化日期（0=今天，1=昨天，2=前天，以此类推）
-        function getFormattedDate(daysAgo) {
-            const date = new Date();
-            date.setDate(date.getDate() - daysAgo);
-            return `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')}`;
-        }
-
-        // 格式化日期显示
-        function formatDateDisplay(dateString, today) {
-            const date = new Date(dateString);
-            const diffTime = Math.abs(today - date);
-            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-            if (diffDays === 1) {
-                return "今天";
-            } else if (diffDays === 2) {
-                return "昨天";
-            } else if (diffDays === 3) {
-                return "前天";
-            } else {
-                return `${date.getMonth() + 1}月${date.getDate()}日`;
-            }
-        }
+        // 定期清理超过24小时的消息（简化实现，实际应在服务器端实现）
+        setInterval(() => {
+            const oneDayAgo = new Date();
+            oneDayAgo.setDate(oneDayAgo.getDate() - 1);
+            
+            db.collection('messages')
+                .where('timestamp', '<', oneDayAgo)
+                .get()
+                .then((snapshot) => {
+                    snapshot.forEach((doc) => {
+                        doc.ref.delete();
+                    });
+                });
+        }, 60 * 60 * 1000); // 每小时执行一次
     </script>
 </body>
-
 </html>
